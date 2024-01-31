@@ -7,7 +7,6 @@ env:
 
 # Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
     paths: ["*.js","*.jsx","*.ts","*.tsx","*.md","*.mdx","*.yaml","*.yml"]
   pull_request:
@@ -24,13 +23,13 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
   checker:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
+    
     steps:
+      # TODO setup cache
       - uses: taiki-e/install-action@v2
         with:
           # use cargo binstall
@@ -38,14 +37,15 @@ jobs:
 
     
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # Runs a single command using the runners shell
       - name: Search, saving results to a json lines file
         run: rg -i "${{env.match-regex}}" ./ -g "*.{js,jsx,ts,tsx,md,mdx,yaml,yml}" --json --debug | tee matches.jsonl
 
       - name: Parse Results
-        run: |        
+        run: |
+          # Gets Results from rg json output, formats it how github wants.
           matches=0
           while IFS="" read -r json || [ -n "$json" ]; do
             # only for match types (ignoring start file, end file, summary)
@@ -65,7 +65,7 @@ jobs:
                 matched_text=$(echo "$json" | jq -r --argjson index "$index" '.data.submatches[$index].match.text')
                 col_start=$(echo "$json" | jq -r --argjson index "$index" '.data.submatches[$index].start')
                 col_end=$(echo "$json" | jq -r --argjson index "$index" '.data.submatches[$index].end')
-                echo "::warning file=${file_name},line=${line_number},endLine=${line_number},col=${col_start},endColumn=${col_end},title=Wrong spelling found: \"${matched_text}\"::British spelling found. (try looking in a dictionary for the americal alternative)"
+                echo "::error file=${file_name},line=${line_number},endLine=${line_number},col=${col_start},endColumn=${col_end},title=Wrong spelling found: \"${matched_text}\"::Wrong spelling found: \"${matched_text}\".\n(try looking in a dictionary for the american alternative)"
                 ((matches++))
               done
             else
