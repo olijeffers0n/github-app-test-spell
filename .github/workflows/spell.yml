@@ -1,0 +1,81 @@
+# This is a basic workflow to help you get started with Actions
+
+name: "Ensure no Bri'ish"
+
+env:
+  match-regex: "accessorise|aluminium|analyse|armour|authorise|behoves|cancelled|catalogue|centre|civilisation|colour|defence|gramme|grey|honour|kerb|labour|licence|manoeuvres|metre|modelled|neighbour|organisation|organise|practise|recognise|routeing|serialise|tonne|travelling"
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  push:
+    paths: ["*.js","*.jsx","*.ts","*.tsx","*.md","*.mdx","*.yaml","*.yml"]
+  pull_request:
+    types: 
+      - opened
+      - edited
+      - reopened
+      - synchronize
+      
+    paths: ["*.js","*.jsx","*.ts","*.tsx","*.md","*.mdx","*.yaml","*.yml"]
+
+  # tmp: manual run
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  checker:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - uses: taiki-e/install-action@v2
+        with:
+          # use cargo binstall
+          tool: ripgrep
+
+    
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+
+
+
+      # Runs a single command using the runners shell
+      - name: Search, saving results to a json lines file
+        run: rg -i "${{env.match-regex}}" -g '*.{js,jsx,ts,tsx,md,mdx,yaml,yml}' --json > matches.jsonl
+
+      - name: Parse Results
+        run: |        
+          matches=0
+          while IFS="" read -r json || [ -n "$json" ]; do
+            # Extracting information using jq
+            file_name=$(echo "$json" | jq -r '.data.path.text')
+            line_number=$(echo "$json" | jq -r '.data.line_number')
+            
+            # Looping over submatches
+            submatches_count=$(echo "$json" | jq -r '.data.submatches | length')
+            if [ "$submatches_count" -gt 0 ]; then
+              for index in $(seq 0 $((submatches_count - 1))); do
+                matched_text=$(echo "$json" | jq -r --argjson index "$index" '.data.submatches[$index].match.text')
+                col_start=$(echo "$json" | jq -r --argjson index "$index" '.data.submatches[$index].start')
+                col_end=$(echo "$json" | jq -r --argjson index "$index" '.data.submatches[$index].end')
+                echo "::warning file=${file_name},line=${line_number},endLine=${line_number},col=${col_start},endColumn=${col_end},title=Wrong spelling found: \"${matched_text}\"::British spelling found. (try looking in a dictionary for the americal alternative)"
+                ((matches++))
+              done
+            else
+              # should never happen
+              echo ::error title=Unexpected Data::Unexpected Data found: match json has empty sub-matches:\\n${json}
+            fi
+          done < matches.jsonl
+
+          if [ "$matches" -eq 0 ]; then
+            # success
+            echo Success: No matches found!
+            exit 0
+          else
+            # fail
+            echo $matches matches found.
+            exit 1
+          fi
