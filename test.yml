@@ -5,7 +5,7 @@ allow-flight:
     hacking however there can be false positives.
 allow-nether:
   default: 'true'
-  description: 'Allows users to travel to the Nether.'
+  description: 'Allows users to travel to the Nether.a'
 broadcast-console-to-ops:
   default: 'true'
   description: 'Send console command output to all online operators.'
