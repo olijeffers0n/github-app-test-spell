@@ -41,30 +41,37 @@ jobs:
 
       # Runs a single command using the runners shell
       - name: Search, saving results to a json lines file
-        run: rg -i "${{env.match-regex}}" ./ -g "*.{js,jsx,ts,tsx,md,mdx,yaml,yml}" --json --debug | tee matches.jsonl
+        run: rg -i "${{env.match-regex}}" ./ -g "*.{js,jsx,ts,tsx,md,mdx,yaml,yml}" --json | tee matches.jsonl
 
       - name: Parse Results
         run: |
           # Gets Results from rg json output, formats it how github wants.
+          echo "Starting parsing"
           matches=0
           while IFS="" read -r json || [ -n "$json" ]; do
+            
             # only for match types (ignoring start file, end file, summary)
             type=$(echo "$json" | jq -r '.type')
+            echo "got line of type=${type}"
             if [ "$type" != "match" ]; then
+              echo "skipping..."
               continue
             fi
             
             # Extracting information using jq
             file_name=$(echo "$json" | jq -r '.data.path.text')
             line_number=$(echo "$json" | jq -r '.data.line_number')
-            
+
             # Looping over submatches
             submatches_count=$(echo "$json" | jq -r '.data.submatches | length')
+            echo "got n=${submatches_count} matches for line=${line_number} in file=${file_name}"
             if [ "$submatches_count" -gt 0 ]; then
               for index in $(seq 0 $((submatches_count - 1))); do
                 matched_text=$(echo "$json" | jq -r --argjson index "$index" '.data.submatches[$index].match.text')
                 col_start=$(echo "$json" | jq -r --argjson index "$index" '.data.submatches[$index].start')
                 col_end=$(echo "$json" | jq -r --argjson index "$index" '.data.submatches[$index].end')
+                echo "for submatch i=${index} / n=${submatches_count}: text=${matched_text} col=${col_start}:${col_end}"
+                
                 echo "::error file=${file_name},line=${line_number},endLine=${line_number},col=${col_start},endColumn=${col_end},title=Wrong spelling found: \"${matched_text}\"::Wrong spelling found: \"${matched_text}\".\n(try looking in a dictionary for the american alternative)"
                 ((matches++))
               done
@@ -73,13 +80,13 @@ jobs:
               echo ::error title=Unexpected Data::Unexpected Data found: match json has empty sub-matches:\\n${json}
             fi
           done < matches.jsonl
-
+          echo "Completed."
           if [ "$matches" -eq 0 ]; then
             # success
-            echo Success: No matches found!
+            echo "Success: No matches found!"
             exit 0
           else
-            # fail
-            echo $matches matches found.
+            # run fail
+            echo "${matches} matches found."
             exit 1
           fi
