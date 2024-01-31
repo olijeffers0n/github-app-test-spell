@@ -42,7 +42,7 @@ jobs:
 
       # Runs a single command using the runners shell
       - name: Search, saving results to a json lines file
-        run: rg -i "${{env.match-regex}}" -g "*.{js,jsx,ts,tsx,md,mdx,yaml,yml}" --json | tee matches.jsonl
+        run: rg -i "${{env.match-regex}}" -g "*.{js|jsx|ts|tsx|md|mdx|yaml|yml}" --json | tee matches.jsonl
 
       - name: Parse Results
         run: |        
