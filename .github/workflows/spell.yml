@@ -73,8 +73,7 @@ jobs:
                 echo "for submatch i=${index} / n=${submatches_count}: text=${matched_text} col=${col_start}:${col_end}"
                 
                 echo "::error file=${file_name},line=${line_number},endLine=${line_number},col=${col_start},endColumn=${col_end},title=Wrong spelling found: \"${matched_text}\"::Wrong spelling found: \"${matched_text}\".\\n(try looking in a dictionary for the american alternative)" || true
-                echo "test"
-                ((matches++))
+                ((matches++)) || true
               done
               echo "test2"
             else
