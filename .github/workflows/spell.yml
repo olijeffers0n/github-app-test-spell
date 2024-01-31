@@ -40,8 +40,6 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
 
-
-
       # Runs a single command using the runners shell
       - name: Search, saving results to a json lines file
         run: rg -i "${{env.match-regex}}" -g "*.{js,jsx,ts,tsx,md,mdx,yaml,yml}" --json | tee matches.jsonl
@@ -50,6 +48,12 @@ jobs:
         run: |        
           matches=0
           while IFS="" read -r json || [ -n "$json" ]; do
+            # only for match types (ignoring start file, end file, summary)
+            type=$(echo "$json" | jq -r '.type')
+            if [ "$type" != "match" ]; then
+              continue
+            fi
+            
             # Extracting information using jq
             file_name=$(echo "$json" | jq -r '.data.path.text')
             line_number=$(echo "$json" | jq -r '.data.line_number')
