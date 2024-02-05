@@ -9,12 +9,9 @@ env:
 on:
   push:
     paths: ["**/*.js","**/*.jsx","**/*.ts","**/*.tsx","**/*.md","**/*.mdx","**/*.yaml","**/*.yml"]
+    # prevent double trigger for same-repo prs
+    branches: ["master", "main"]
   pull_request:
-    types: 
-      - opened
-      - edited
-      - reopened
-      - synchronize
     paths: ["**/*.js","**/*.jsx","**/*.ts","**/*.tsx","**/*.md","**/*.mdx","**/*.yaml","**/*.yml"]
 
   # tmp: manual run
